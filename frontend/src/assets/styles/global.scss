@@ -1,0 +1,77 @@
+@use 'variables' as *;
+
+// ============================================================================
+// Global Styles — 云冈石窟智能电子辞典
+// ============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: $font-size-body;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: $font-ui;
+  color: $color-text-body;
+  background-color: $color-bg;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  font-family: $font-body;
+  color: $color-text-heading;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+a {
+  color: $color-accent;
+  text-decoration: none;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: $color-accent-light;
+  }
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: $color-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $color-border;
+  border-radius: 3px;
+
+  &:hover {
+    background: $color-text-muted;
+  }
+}
+
+// Selection
+::selection {
+  background: $color-accent-bg;
+  color: $color-text-heading;
+}
+
+// Utility classes
+.container {
+  max-width: $max-content-width;
+  margin: 0 auto;
+  padding: 0 $space-lg;
+}

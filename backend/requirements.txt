@@ -1,0 +1,13 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.6
+pydantic>=2.9.2
+pydantic-settings>=2.14.1
+pymilvus>=2.4.0
+milvus-lite>=2.4.0
+sentence-transformers>=5.6.0
+rank-bm25>=0.2.2
+jieba>=0.42.1
+openai>=2.43.0
+httpx>=0.28.1
+python-dotenv>=1.2.2
+python-multipart>=0.0.30

@@ -1,0 +1,57 @@
+// ============================================================================
+// Yungang Grottoes Design Tokens — 云冈砂岩色系
+// Inspired by the warm earth tones of sandstone cliffs
+// ============================================================================
+
+// === Color Palette ===
+// Page background
+$color-bg: #FDF8F0;
+$color-bg-card: #F5EDE0;
+$color-border: #E8D9C0;
+
+// Text
+$color-text-muted: #C4A675;
+$color-text-body: #8B7355;
+$color-text-heading: #5C4A32;
+$color-text-emphasis: #3D3020;
+
+// Accent — terracotta / grotto mural red
+$color-accent: #B8543A;
+$color-accent-light: #D4896F;
+$color-accent-bg: rgba(184, 84, 58, 0.08);
+
+// Semantic
+$color-confidence-high: #4A7C59;
+$color-confidence-medium: #C4A035;
+$color-confidence-low: #9B9B9B;
+$color-not-found: #D4C5B9;
+
+// === Spacing ===
+$space-xs: 4px;
+$space-sm: 8px;
+$space-md: 16px;
+$space-lg: 24px;
+$space-xl: 32px;
+$space-2xl: 48px;
+
+// === Typography ===
+$font-body: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+$font-ui: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+$font-size-body: 16px;
+$font-size-heading: 24px;
+$font-size-small: 14px;
+$font-size-caption: 12px;
+
+// === Border Radius ===
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+
+// === Shadows ===
+$shadow-sm: 0 1px 3px rgba(92, 74, 50, 0.08);
+$shadow-md: 0 2px 8px rgba(92, 74, 50, 0.1);
+$shadow-lg: 0 4px 16px rgba(92, 74, 50, 0.12);
+
+// === Layout ===
+$header-height: 64px;
+$max-content-width: 860px;

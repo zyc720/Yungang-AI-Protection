@@ -1,0 +1,39 @@
+@use 'variables' as *;
+
+// ============================================================================
+// Element Plus Theme Override via CSS Custom Properties
+// ============================================================================
+
+:root {
+  // Primary color — terracotta
+  --el-color-primary: #{$color-accent};
+  --el-color-primary-light-3: #{$color-accent-light};
+  --el-color-primary-light-5: #{rgba($color-accent, 0.5)};
+  --el-color-primary-light-7: #{rgba($color-accent, 0.3)};
+  --el-color-primary-light-8: #{rgba($color-accent, 0.2)};
+  --el-color-primary-light-9: #{rgba($color-accent, 0.1)};
+
+  // Background
+  --el-bg-color: #{$color-bg};
+  --el-bg-color-overlay: #{$color-bg};
+
+  // Border
+  --el-border-radius-base: #{$radius-md};
+  --el-border-color-base: #{$color-border};
+
+  // Typography
+  --el-font-family: #{$font-ui};
+
+  // Input
+  --el-input-bg-color: #fff;
+  --el-input-border-color: #{$color-border};
+  --el-input-hover-border-color: #{$color-accent};
+  --el-input-focus-border-color: #{$color-accent};
+
+  // Button
+  --el-button-hover-text-color: #fff;
+  --el-button-hover-bg-color: #{$color-accent-light};
+  --el-button-hover-border-color: #{$color-accent-light};
+  --el-button-active-bg-color: #9E3E25;
+  --el-button-active-border-color: #9E3E25;
+}

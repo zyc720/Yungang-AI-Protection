@@ -1,0 +1,5 @@
+export { searchDocuments } from './search'
+export { chatQuery } from './chat'
+export { healthCheck } from './health'
+export { ApiError } from './errors'
+export { default as apiClient } from './client'
