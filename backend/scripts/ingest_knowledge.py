@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MD_FILE = PROJECT_ROOT / "outputs/云冈石窟辞典/auto/云冈石窟辞典.md"
+CONTENT_LIST_FILE = PROJECT_ROOT / "outputs/云冈石窟辞典/auto/云冈石窟辞典_content_list.json"
 DEFAULT_OUTPUT = PROJECT_ROOT / "backend" / "data" / "chunks.json"
 
 # The 15 major categories in body order
@@ -549,18 +550,188 @@ def _group_sentences(sentences: list[str], max_size: int) -> list[str]:
 # Step 3: Output
 # ============================================================================
 
-def chunks_to_dicts(chunks: list[Chunk]) -> list[dict[str, Any]]:
-    """Convert chunks to dicts suitable for Milvus insertion."""
+def build_page_mapping() -> dict[int, int]:
+    """Build page_idx -> book page number mapping from content_list.json.
+
+    The PDF-to-MD conversion pipeline produces a content_list.json that
+    indexes every text block by page_idx (PDF page index). Book pages are
+    recorded as page_number items on each page.
+
+    Returns:
+        Dict mapping page_idx to the actual book page number.
+        Entries without a page number are omitted.
+    """
+    if not CONTENT_LIST_FILE.exists():
+        logger.warning("content_list.json not found at %s, page numbers unavailable", CONTENT_LIST_FILE)
+        return {}
+
+    with open(CONTENT_LIST_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    page_map: dict[int, int] = {}
+    for item in data:
+        if item.get("type") == "page_number":
+            pid = item["page_idx"]
+            pn = item.get("text", "").strip()
+            # Book page number may be "18", "4/5" (facing pages), etc.
+            if not pn:
+                continue
+            try:
+                page_map[pid] = int(pn.split("/")[0])
+            except ValueError:
+                pass
+
+    logger.info(
+        "Page number mapping built: %d pages indexed, page_idx range [%d, %d]",
+        len(page_map),
+        min(page_map) if page_map else 0,
+        max(page_map) if page_map else 0,
+    )
+    return page_map
+
+
+def extract_entry_page_indices() -> list[tuple[str, int]]:
+    """Extract ordered list of (cleaned_title, page_idx) for all entry headers.
+
+    Each H2-level text block in content_list.json that has pinyin in its
+    title is a dictionary entry header. We extract them in document order
+    so they can be aligned with entries parsed from the MD file.
+
+    Returns:
+        Ordered list of (cleaned_title, page_idx) tuples.
+    """
+    if not CONTENT_LIST_FILE.exists():
+        logger.warning("content_list.json not found, cannot extract entry pages")
+        return []
+
+    with open(CONTENT_LIST_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    entries: list[tuple[str, int]] = []
+    for item in data:
+        if item.get("type") == "text" and item.get("text_level") == 2:
+            text = item["text"].strip()
+            # category headers and skip-titles have no pinyin
+            if text in CATEGORIES or text in SKIP_TITLES:
+                continue
+            clean = _clean_title(text)
+            if clean:
+                entries.append((clean, item["page_idx"]))
+
+    logger.info("Extracted %d entry headers with page indices from content_list", len(entries))
+    return entries
+
+
+def assign_pages_to_entries(
+    md_entries: list[Entry],
+    cl_entries: list[tuple[str, int]],
+    page_map: dict[int, int],
+) -> dict[str, int]:
+    """Assign book page numbers to MD entries by positional alignment.
+
+    The MD file and content_list.json are generated from the same source
+    and preserve the same entry order. We walk through both lists,
+    matching entries by cleaned title with a local search window.
+
+    Args:
+        md_entries: Entries parsed from the MD file (in order).
+        cl_entries: (cleaned_title, page_idx) tuples from content_list (in order).
+        page_map: page_idx -> book page number mapping.
+
+    Returns:
+        Dict mapping cleaned entry title to book page number.
+    """
+    if not page_map or not cl_entries:
+        return {}
+
+    result: dict[str, int] = {}
+    cl_idx = 0
+    window = 15  # search window for fuzzy alignment
+
+    for entry in md_entries:
+        title = _clean_title(entry.title_with_pinyin)
+        matched_page: int | None = None
+
+        # Attempt exact match within sliding window around current position
+        for offset in range(-window, window + 1):
+            check_idx = cl_idx + offset
+            if 0 <= check_idx < len(cl_entries) and cl_entries[check_idx][0] == title:
+                pid = cl_entries[check_idx][1]
+                matched_page = page_map.get(pid)
+                cl_idx = check_idx + 1
+                break
+
+        result[title] = matched_page
+
+    matched = sum(1 for v in result.values() if v is not None)
+    logger.info(
+        "Page assignment: %d/%d entries matched (%.1f%%)",
+        matched,
+        len(result),
+        100 * matched / max(len(result), 1),
+    )
+    return result
+
+
+def chunks_to_dicts(
+    chunks: list[Chunk],
+    entry_pages: dict[str, int] | None = None,
+) -> list[dict[str, Any]]:
+    """Convert chunks to dicts suitable for Milvus insertion.
+
+    Args:
+        chunks: Chunk objects from the chunking pipeline.
+        entry_pages: Optional mapping from cleaned entry title to book page
+            number. If provided, real page numbers are used.
+
+    Returns:
+        List of dicts with keys matching the Milvus collection schema.
+    """
+    if entry_pages is None:
+        entry_pages = {}
+
     return [
         {
             "entry_id": c.entry_id,
             "title": c.title,
-            "page": 0,  # page numbers not extracted from scan
+            "page": _get_page_for_chunk(c, entry_pages),
             "chunk_id": c.chunk_id,
             "content": c.content,
         }
         for c in chunks
     ]
+
+
+def _get_page_for_chunk(
+    chunk: Chunk,
+    entry_pages: dict[str, int],
+) -> int:
+    """Determine the page number for a chunk.
+
+    For merged chunks, uses the first merged entry's page.
+    For split chunks, all sub-chunks inherit the same page.
+    Returns 0 if no page mapping is available.
+
+    Args:
+        chunk: The chunk to look up.
+        entry_pages: Cleaned title -> page number mapping.
+
+    Returns:
+        Book page number, or 0 if not found.
+    """
+    # Try each merged entry title (cleaned) until we find a match
+    for entry_title in chunk.merged_entries:
+        # entry_title in merged_entries is already the clean title
+        page = entry_pages.get(entry_title)
+        if page is not None and page > 0:
+            return page
+
+    # Fallback: try the chunk's primary entry_id (also a clean title)
+    page = entry_pages.get(chunk.entry_id)
+    if page is not None and page > 0:
+        return page
+
+    return 0
 
 
 def print_statistics(entries: list[Entry], chunks: list[Chunk]) -> None:
@@ -632,15 +803,20 @@ def main() -> None:
     logger.info("Building chunks...")
     chunks = build_chunks(entries)
 
-    # Step 3: Print statistics
+    # Step 3: Extract page numbers from the PDF-to-MD intermediate data
+    logger.info("Building page number mapping from content_list.json...")
+    page_map = build_page_mapping()
+    cl_entries = extract_entry_page_indices()
+    entry_pages = assign_pages_to_entries(entries, cl_entries, page_map)
+
+    # Step 4: Print statistics
     print_statistics(entries, chunks)
 
-    # Step 4: Output
     if args.stats_only:
         return
 
-    # Convert to dicts
-    chunk_dicts = chunks_to_dicts(chunks)
+    # Convert to dicts with real page numbers
+    chunk_dicts = chunks_to_dicts(chunks, entry_pages)
 
     # JSON output
     json_path = args.json_output or str(DEFAULT_OUTPUT)
@@ -653,6 +829,7 @@ def main() -> None:
         d = {
             "entry_id": c.entry_id,
             "title": c.title,
+            "page": _get_page_for_chunk(c, entry_pages),
             "category": c.category,
             "chunk_id": c.chunk_id,
             "chunk_index": c.chunk_index,
@@ -706,9 +883,10 @@ def _insert_into_milvus(chunk_dicts: list[dict]) -> None:
     logger.info("Generating BGE-M3 embeddings for %d chunks...", len(texts))
     embeddings = embedding_service.encode(texts, show_progress_bar=True)
 
-    # Attach embeddings to data
+    # Attach embeddings to data — field must be named "vector" to match
+    # the default MilvusClient.create_collection() schema.
     for i, emb in enumerate(embeddings):
-        chunk_dicts[i]["embedding"] = emb.tolist()
+        chunk_dicts[i]["vector"] = emb.tolist()
 
     # Insert into Milvus in batches
     milvus = MilvusConnectionManager()

@@ -10,7 +10,6 @@ import { useSearchStore } from '@/stores/searchStore'
 import { useAppStore } from '@/stores/appStore'
 import type { DocumentViewEntry } from '@/types/dictionary'
 
-import AppHeader from '@/components/AppHeader.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import HotEntries from '@/components/HotEntries.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -93,8 +92,6 @@ function handleShowDocument(_entryId: string, title: string) {
 
 <template>
   <div class="home">
-    <AppHeader :health-status="appStore.healthStatus" />
-
     <main class="main-content">
       <!-- Section 1 & 2: Search Bar + Hot Entries -->
       <section class="search-section">

@@ -11,6 +11,13 @@ on first use) and should happen only once per process lifetime.
 """
 
 import logging
+import os
+
+# Prevent HuggingFace Hub from making network requests when
+# the model is already cached locally (offline deployment).
+# Must be set BEFORE importing sentence_transformers / transformers.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from app.config.settings import get_settings
@@ -40,6 +47,7 @@ class EmbeddingService:
         if self._initialized:
             return
         settings = get_settings()
+
         logger.info(
             "Loading BGE-M3 model: %s (device: %s)",
             settings.bge_model_name,
@@ -48,6 +56,7 @@ class EmbeddingService:
         self._model: SentenceTransformer = SentenceTransformer(
             settings.bge_model_name,
             device=settings.embedding_device,
+            local_files_only=True,
         )
         self._dim: int = settings.embedding_dim
         self._initialized = True

@@ -58,13 +58,31 @@ def ensure_collection_exists() -> None:
 
 
 def _load_collection_if_needed(client, collection_name: str) -> None:
-    """Load the collection into memory if it's in released state."""
+    """Load the collection into memory if it's in released state.
+
+    Milvus Lite does not persist the in-memory load state across process
+    restarts — a collection that was loaded in a previous process will be
+    in "released" state and must be explicitly re-loaded.
+    """
     try:
-        # Check if collection needs loading by attempting a lightweight operation
-        client.load_collection(collection_name)
-        logger.debug("Collection '%s' loaded into memory", collection_name)
+        # Check current load state first to avoid unnecessary load calls
+        load_state = client.get_load_state(collection_name)
+        state = load_state.get("state", "")
+        if state == "Loaded":
+            logger.info("Collection '%s' is already loaded", collection_name)
+            return
+        logger.info(
+            "Collection '%s' state='%s', loading into memory...",
+            collection_name,
+            state,
+        )
     except Exception:
+        # get_load_state may not be supported by all Milvus versions;
+        # fall through to load_collection which is idempotent anyway
         logger.debug(
-            "Collection '%s' load attempted (may already be loaded)",
+            "Could not check load state for '%s', attempting load",
             collection_name,
         )
+
+    client.load_collection(collection_name)
+    logger.info("Collection '%s' loaded into memory", collection_name)

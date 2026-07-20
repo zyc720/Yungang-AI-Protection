@@ -1,34 +1,60 @@
 <script setup lang="ts">
 /**
- * Application header with logo, title, and backend health indicator.
+ * Application header with logo, title, page navigation, and backend health indicator.
  */
+import { useRoute } from 'vue-router'
+
 defineProps<{
   healthStatus: 'ok' | 'error' | 'loading'
 }>()
+
+const route = useRoute()
+
+function isActive(path: string): boolean {
+  return route.path === path
+}
 </script>
 
 <template>
   <header class="app-header">
     <div class="header-inner">
       <div class="brand">
-        <div class="logo-icon">
-          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="4" width="24" height="32" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
-            <path d="M14 14 Q20 8 26 14" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            <line x1="16" y1="20" x2="24" y2="20" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="16" y1="25" x2="22" y2="25" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-        </div>
         <div class="title-group">
-          <h1 class="app-title">云冈石窟智能电子辞典</h1>
-          <p class="app-subtitle">基于《云冈石窟辞典》知识库</p>
+          <h1 class="app-title">云冈石窟智能问答平台</h1>
+          <p class="app-subtitle">基于每个用户自己所选择的知识库</p>
         </div>
+        <nav class="page-badges">
+          <router-link
+            to="/"
+            class="page-badge"
+            :class="{ active: isActive('/') }"
+          >
+            <img
+              src="/ai.svg"
+              alt="AI"
+              class="page-badge-icon"
+            />
+            <span class="page-badge-text">AI chat</span>
+          </router-link>
+          <router-link
+            to="/knowledge-base"
+            class="page-badge"
+            :class="{ active: isActive('/knowledge-base') }"
+          >
+            <img
+              src="/graph.svg"
+              alt="知识库"
+              class="page-badge-icon"
+            />
+            <span class="page-badge-text">知识库</span>
+          </router-link>
+        </nav>
       </div>
       <div class="health-indicator" :class="`health-${healthStatus}`" :title="healthStatus === 'ok' ? '服务正常' : healthStatus === 'error' ? '服务异常' : '检测中...'">
-        <span class="health-dot"></span>
-        <span class="health-label">
-          {{ healthStatus === 'ok' ? '服务正常' : healthStatus === 'error' ? '服务异常' : '检测中' }}
-        </span>
+          <span class="health-dot"></span>
+          <span class="health-label">
+            {{ healthStatus === 'ok' ? '服务正常' : healthStatus === 'error' ? '服务异常' : '检测中' }}
+          </span>
       </div>
     </div>
   </header>
@@ -61,11 +87,51 @@ defineProps<{
   gap: $space-md;
 }
 
-.logo-icon {
-  width: 36px;
-  height: 36px;
-  color: $color-accent;
+.page-badges {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.page-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 8px;
+  border-radius: $radius-sm;
+  white-space: nowrap;
   flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
+  color: $color-text-muted;
+  background: transparent;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    color: $color-accent;
+    background: rgba($color-accent, 0.04);
+  }
+
+  &.active {
+    color: $color-accent;
+    background: $color-accent-bg;
+
+    .page-badge-text {
+      font-weight: 600;
+    }
+  }
+}
+
+.page-badge-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.page-badge-text {
+  font-size: $font-size-small;
+  letter-spacing: 0.3px;
 }
 
 .title-group {

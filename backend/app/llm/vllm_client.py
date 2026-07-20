@@ -19,9 +19,17 @@ from app.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
-# DeepSeek-R1 distilled models wrap reasoning in &lt;think&gt;...&lt;/think&gt; blocks.
+# DeepSeek-R1 distilled models wrap reasoning in <think>...</think> blocks.
+# Some output formats may also use HTML-escaped &lt;think&gt; tags.
 # We strip these so the answer parser receives clean text.
-_THINK_PATTERN = re.compile(r"&lt;think&gt;.*?&lt;/think&gt;\s*", re.DOTALL)
+_THINK_PATTERN = re.compile(
+    r"<think>.*?</think>\s*",
+    re.DOTALL,
+)
+_THINK_ESCAPED_PATTERN = re.compile(
+    r"&lt;think&gt;.*?&lt;/think&gt;\s*",
+    re.DOTALL,
+)
 
 
 class VLLMClient(LLMClient):
@@ -106,19 +114,23 @@ class VLLMClient(LLMClient):
 
 
 def _strip_think(text: str) -> str:
-    """Remove &lt;think&gt;...&lt;/think&gt; reasoning blocks from model output.
+    """Remove <think>...</think> reasoning blocks from model output.
 
     DeepSeek-R1 family models emit chain-of-thought reasoning wrapped in
-    XML-style &lt;think&gt; tags. The RAG pipeline expects clean answer text,
-    so we strip these blocks before returning to the caller.
+    XML <think> tags. The RAG pipeline expects clean answer text, so we
+    strip these blocks before returning to the caller.
+
+    Handles both raw <think> tags and HTML-escaped &lt;think&gt; variants.
 
     Args:
-        text: Raw model output possibly containing &lt;think&gt; blocks.
+        text: Raw model output possibly containing <think> blocks.
 
     Returns:
-        Cleaned text with all &lt;think&gt; blocks removed.
+        Cleaned text with all <think> blocks removed.
     """
-    stripped = _THINK_PATTERN.sub("", text).strip()
+    stripped = _THINK_PATTERN.sub("", text)
+    stripped = _THINK_ESCAPED_PATTERN.sub("", stripped)
+    stripped = stripped.strip()
     if stripped != text:
-        logger.debug("Stripped &lt;think&gt; block(s) from vLLM response")
+        logger.debug("Stripped <think> block(s) from vLLM response")
     return stripped

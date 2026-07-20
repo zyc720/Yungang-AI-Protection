@@ -28,6 +28,20 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Starting up Yungang Dictionary RAG backend...")
+
+    # Ensure Milvus collection exists and is loaded into memory.
+    # The collection may be in "released" state from a previous session
+    # (Milvus Lite does not persist the load state across process restarts).
+    try:
+        from app.database.collection_setup import ensure_collection_exists
+
+        ensure_collection_exists()
+    except Exception:
+        logger.warning(
+            "Failed to ensure Milvus collection is ready",
+            exc_info=True,
+        )
+
     logger.info("Application is ready to accept requests")
 
     yield

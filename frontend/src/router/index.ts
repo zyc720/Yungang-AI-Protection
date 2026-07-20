@@ -6,11 +6,14 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'home',
     component: () => import('@/views/HomeView.vue'),
-    meta: { title: '云冈石窟智能电子辞典' },
+    meta: { title: 'AI chat — 云冈石窟智能问答平台' },
   },
-  // Future routes (v2+):
-  // { path: '/browse', name: 'browse', component: ... },
-  // { path: '/history', name: 'history', component: ... },
+  {
+    path: '/knowledge-base',
+    name: 'knowledge-base',
+    component: () => import('@/views/KnowledgeBaseView.vue'),
+    meta: { title: '知识库 — 云冈石窟智能问答平台' },
+  },
 ]
 
 const router = createRouter({
